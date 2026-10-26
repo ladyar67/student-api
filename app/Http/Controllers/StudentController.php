@@ -4,70 +4,88 @@ namespace App\Http\Controllers;
 
 use App\Models\Student;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class StudentController extends Controller
 {
+    // GET /api/students
     public function index()
     {
-        $students = Student::all();
-
-        return view('students.index', compact('students'));
+        return response()->json(Student::all(), 200);
     }
 
-    public function create()
-    {
-        return view('students.create');
-    }
-
+    // POST /api/students
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'student_ID' => 'required|unique:students,student_ID',
+            'student_ID' => [
+                'required',
+                'string',
+                'max:50',
+                'unique:students,student_ID',
+            ],
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'email' => 'required|email|unique:students,email',
-            'course' => 'required|string|max:255',
-            'year_level' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:students,email',
+            'course' => 'required|string|max:100',
+            'year_level' => 'required|string|max:50',
         ]);
 
-        Student::create($validated);
+        $student = Student::create($validated);
 
-        return redirect()->route('students.index')
-            ->with('success', 'Student added successfully!');
+        return response()->json([
+            'message' => 'Student created successfully',
+            'student' => $student,
+        ], 201);
     }
 
+    // GET /api/students/{student}
     public function show(Student $student)
     {
-        return view('students.show', compact('student'));
+        return response()->json($student, 200);
     }
 
-    public function edit(Student $student)
-    {
-        return view('students.edit', compact('student'));
-    }
-
+    // PUT /api/students/{student}
     public function update(Request $request, Student $student)
     {
         $validated = $request->validate([
-            'student_ID' => 'required|unique:students,student_ID,' . $student->id,
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'email' => 'required|email|unique:students,email,' . $student->id,
-            'course' => 'required|string|max:255',
-            'year_level' => 'required|string|max:255',
+            'student_ID' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:50',
+                Rule::unique('students', 'student_ID')
+                    ->ignore($student->id),
+            ],
+            'first_name' => 'sometimes|required|string|max:255',
+            'last_name' => 'sometimes|required|string|max:255',
+            'email' => [
+                'sometimes',
+                'required',
+                'email',
+                'max:255',
+                Rule::unique('students', 'email')
+                    ->ignore($student->id),
+            ],
+            'course' => 'sometimes|required|string|max:100',
+            'year_level' => 'sometimes|required|string|max:50',
         ]);
 
         $student->update($validated);
 
-        return redirect()->route('students.index')
-            ->with('success', 'Student updated successfully!');
+        return response()->json([
+            'message' => 'Student updated successfully',
+            'student' => $student->fresh(),
+        ], 200);
     }
 
+    // DELETE /api/students/{student}
     public function destroy(Student $student)
     {
         $student->delete();
 
-        return redirect()->route('students.index')
-            ->with('success', 'Student deleted successfully!');
+        return response()->json([
+            'message' => 'Student deleted successfully',
+        ], 200);
     }
 }
